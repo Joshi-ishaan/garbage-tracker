@@ -1,0 +1,199 @@
+/* Reset */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* Body */
+body {
+  font-family: Arial, sans-serif;
+  background: #0f172a;
+  color: #e2e8f0;
+}
+
+/* Container */
+.container {
+  max-width: 1100px;
+  margin: auto;
+  padding: 30px 20px;
+}
+
+/* Headings */
+h1 {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+h2 {
+  margin-bottom: 15px;
+}
+
+h3 {
+  margin: 20px 0 10px;
+}
+
+/* Buttons */
+button {
+  padding: 6px 12px;
+  margin-right: 8px;
+  background: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #1d4ed8;
+}
+
+/* Input */
+input {
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid #334155;
+  background: #1e293b;
+  color: white;
+  margin-right: 10px;
+}
+
+/* Stats Grid */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 15px;
+  margin: 20px 0;
+}
+
+/* Card */
+.card {
+  background: #1e293b;
+  padding: 16px;
+  border-radius: 12px;
+  text-align: center;
+  font-weight: 500;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+}
+
+/* Table */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+  background: #1e293b;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+th {
+  background: #334155;
+  text-align: left;
+  font-weight: 600;
+}
+
+th, td {
+  padding: 12px;
+  border-bottom: 1px solid #334155;
+}
+
+tr:hover {
+  background: #273449;
+}
+
+/* Status colors */
+td {
+  font-size: 14px;
+}
+
+/* Center top nav buttons */
+.top-actions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+/* Mobile */
+@media (max-width: 600px) {
+  .stats {
+    grid-template-columns: 1fr;
+  }
+
+  th, td {
+    font-size: 12px;
+    padding: 8px;
+  }
+}
+
+/* login center */
+.login-container {
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* login box */
+.login-box {
+  background: #1e293b;
+  padding: 30px;
+  border-radius: 12px;
+  width: 280px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+  padding: 10px 20px;
+}
+
+/* heading */
+.login-title {
+  text-align: center;
+  margin-bottom: 15px;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+/* login inputs spacing */
+.login-box input {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 12px;   /* 👈 spacing fix */
+  border: 1px solid #334155;
+  border-radius: 6px;
+  background: #0f172a;
+  color: white;
+}
+
+/* button full width + spacing */
+.login-box button {
+  width: 100%;
+  padding: 10px;
+  margin-top: 5px;
+}
+
+/* page center */
+body {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start; /* top se thoda space rahe */
+  padding-top: 40px;
+  align-items: center;
+}
+
+/* container already hai but ensure */
+.container {
+  width: 100%;
+  max-width: 1100px;
+}
+
+ul {
+  background: #1e293b;
+  padding: 12px;
+  border-radius: 10px;
+  margin-bottom: 15px;
+}
+
+li {
+  padding: 6px 0;
+  border-bottom: 1px solid #334155;
+}
