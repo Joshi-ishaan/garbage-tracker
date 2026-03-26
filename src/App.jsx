@@ -67,15 +67,14 @@ function App() {
     return R * c;
   }
 
-  // 📸 Handle QR scan
+  // 📸 Handle QR scan (🔥 FIXED HERE)
   const handleScan = async (qrValue) => {
     setStatus("Processing...");
-    const cleanQR = qrValue.trim().toLowerCase();
 
     const { data: point, error } = await supabase
       .from("pickup_points")
       .select("*")
-      .eq("qr_code_value", cleanQR)
+      .eq("id", qrValue)   // ✅ FIX: ID based match
       .single();
 
     if (error || !point) {
@@ -99,8 +98,7 @@ function App() {
           Number(point.longitude)
         );
 
-        // 🚨 Too far → log fraud
-        // const { data: userData } = await supabase.auth.getUser();
+        // 🚨 Too far → fraud
         if (distance > 30) {
           setStatus("❌ Too far from location");
 
@@ -205,7 +203,7 @@ function App() {
     ]);
   };
 
-  // 🔐 If not logged in → show login
+  // 🔐 Login screen
   if (!user) {
     return <Login onLogin={handleLogin} />;
   }
@@ -215,7 +213,7 @@ function App() {
       <h1>Garbage Van Tracker MVP</h1>
 
       {/* 🔘 Navigation */}
-      <div style={{ marginBottom: "20px" }}>
+      <div>
         {role === "driver" && (
           <button onClick={() => setView("scanner")}>Scanner</button>
         )}

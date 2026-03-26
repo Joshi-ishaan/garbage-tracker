@@ -1,21 +1,38 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
+import QRCodeCard from "./QRCodeCard";
+import html2canvas from "html2canvas";
 
 export default function AdminDashboard() {
   const [logs, setLogs] = useState([]);
   const [points, setPoints] = useState([]);
+  const [profiles, setProfiles] = useState({}); // ✅ name map
   const [filter, setFilter] = useState("all");
   const [selectedDate, setSelectedDate] = useState("");
+
+  // 🔹 driver form
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [driverName, setDriverName] = useState("");
+
+  // 🔹 location form
+  const [name, setName] = useState("");
+  const [lat, setLat] = useState("");
+  const [lng, setLng] = useState("");
+
+  const [selectedPoint, setSelectedPoint] = useState(null);
 
   useEffect(() => {
     fetchData();
   }, []);
 
   async function fetchData() {
+    // ✅ pickup points
     const { data: pointsData } = await supabase
       .from("pickup_points")
       .select("*");
 
+    // ✅ logs (UNCHANGED — safe)
     const { data: logsData } = await supabase
       .from("scan_logs")
       .select(`
@@ -24,6 +41,17 @@ export default function AdminDashboard() {
       `)
       .order("start_time", { ascending: false });
 
+    // ✅ profiles separately (SAFE)
+    const { data: profileData } = await supabase
+      .from("profiles")
+      .select("id, name");
+
+    const profileMap = {};
+    profileData?.forEach((p) => {
+      profileMap[p.id] = p.name;
+    });
+
+    setProfiles(profileMap);
     setPoints(pointsData || []);
     setLogs(logsData || []);
   }
@@ -65,146 +93,223 @@ export default function AdminDashboard() {
     !visitedIds.has(p.id)
   );
 
-  // 👷 Driver Analytics
+  // 👷 Driver Analytics (SAFE)
   const driverStats = {};
 
   logs.forEach((log) => {
-    const userId = log.user_id || "unknown";
+    const driver = profiles[log.user_id] || log.user_id;
 
-    if (!driverStats[userId]) {
-      driverStats[userId] = {
+    if (!driverStats[driver]) {
+      driverStats[driver] = {
         total: 0,
         valid: 0,
         fraud: 0,
       };
     }
 
-    driverStats[userId].total++;
+    driverStats[driver].total++;
 
     if (log.reason === "valid") {
-      driverStats[userId].valid++;
+      driverStats[driver].valid++;
     } else {
-      driverStats[userId].fraud++;
+      driverStats[driver].fraud++;
     }
   });
 
   const driverList = Object.entries(driverStats);
+
+  // ✅ QR DOWNLOAD
+  const downloadQR = async (id) => {
+    const element = document.getElementById(`qr-${id}`);
+    if (!element) return;
+
+    const canvas = await html2canvas(element);
+    const dataURL = canvas.toDataURL("image/png");
+
+    const link = document.createElement("a");
+    link.href = dataURL;
+    link.download = `pickup-point-${id}.png`;
+    link.click();
+  };
+
+  // ✅ QR PRINT
+  const printQR = (id) => {
+    const element = document.getElementById(`qr-${id}`);
+    if (!element) return;
+
+    const win = window.open("", "", "width=400,height=600");
+
+    win.document.write(`
+      <html>
+        <body style="display:flex;justify-content:center;align-items:center;height:100vh;">
+          ${element.outerHTML}
+        </body>
+      </html>
+    `);
+
+    win.document.close();
+    win.print();
+  };
+
+  // ✅ ADD DRIVER (FIXED)
+  async function addDriver() {
+    if (!email || !password || !driverName) {
+      alert("Fill all fields");
+      return;
+    }
+
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+    });
+
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
+    await supabase.from("profiles").insert([
+      {
+        id: data.user.id,
+        role: "driver",
+        name: driverName,
+      },
+    ]);
+
+    alert("Driver created!");
+    setEmail("");
+    setPassword("");
+    setDriverName("");
+  }
+
+  // ✅ ADD LOCATION
+  async function addPoint() {
+    if (!name || !lat || !lng) {
+      alert("Fill all fields");
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from("pickup_points")
+      .insert([
+        {
+          name,
+          latitude: parseFloat(lat),
+          longitude: parseFloat(lng),
+        },
+      ])
+      .select()
+      .single();
+
+    if (!error) {
+      setSelectedPoint(data);
+      setName("");
+      setLat("");
+      setLng("");
+      fetchData();
+    }
+  }
+
+  // ✅ FIND QR
+  const findQR = () => {
+    const found = points.find(
+      (p) =>
+        Number(p.latitude) === Number(lat) &&
+        Number(p.longitude) === Number(lng)
+    );
+
+    if (found) setSelectedPoint(found);
+    else alert("Location not found");
+  };
 
   return (
     <div className="container">
       <h2>📊 Admin Dashboard</h2>
 
       {/* 📅 Date Filter */}
-      <div style={{ marginBottom: "10px" }}>
-        <input
-          type="date"
-          value={selectedDate}
-          onChange={(e) => setSelectedDate(e.target.value)}
-        />
-        <button onClick={() => setSelectedDate("")}>
-          Clear Date
-        </button>
-      </div>
+      <input
+        type="date"
+        value={selectedDate}
+        onChange={(e) => setSelectedDate(e.target.value)}
+      />
 
       {/* 🔘 Filters */}
-      <div style={{ marginBottom: "15px" }}>
+      <div>
         <button onClick={() => setFilter("all")}>All</button>
         <button onClick={() => setFilter("valid")}>Valid</button>
         <button onClick={() => setFilter("fraud")}>Fraud</button>
       </div>
 
       {/* 📊 Stats */}
-      <div className="stats">
-        <div className="card">Total Locations: {totalPoints}</div>
-        <div className="card">Visited Locations: {visited}</div>
-        <div className="card">Missed Locations: {missed}</div>
-        <div className="card">Fraudulent Scans: {fraudCount}</div>
+      <div>
+        <div>Total Locations: {totalPoints}</div>
+        <div>Visited: {visited}</div>
+        <div>Missed: {missed}</div>
+        <div>Fraud: {fraudCount}</div>
       </div>
 
-      
       {/* 📋 Logs */}
       <h3>📋 Scan Logs</h3>
-
       <table>
-        <thead>
-          <tr>
-            <th>Driver</th>
-            <th>Location</th>
-            <th>Status</th>
-            <th>Time</th>
-          </tr>
-        </thead>
-
         <tbody>
           {filteredLogs.map((log) => (
             <tr key={log.id}>
-              <td>{log.user_id}</td>
-              <td>{log.pickup_points?.name || "Unknown"}</td>
-              <td>
-                {log.reason === "valid"
-                  ? "🟢 Valid"
-                  : log.reason === "too_far"
-                  ? "🔴 Too Far"
-                  : "⚠️ Left Early"}
-              </td>
-              <td>
-                {new Date(log.start_time).toLocaleString()}
-              </td>
+              <td>{profiles[log.user_id] || log.user_id}</td>
+              <td>{log.pickup_points?.name}</td>
+              <td>{log.reason}</td>
+              <td>{new Date(log.start_time).toLocaleString()}</td>
             </tr>
           ))}
         </tbody>
       </table>
 
-      {/* 👷 Driver Analytics */}
-      <h3 style={{ marginTop: "30px" }}>👷 Driver Performance</h3>
-
-      <table>
-        <thead>
-          <tr>
-            <th>Driver</th>
-            <th>Total</th>
-            <th>Valid</th>
-            <th>Fraud</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          {driverList.map(([id, stats]) => (
-            <tr key={id}>
-              <td>{id}</td>
-              <td>{stats.total}</td>
-              <td>{stats.valid}</td>
-              <td style={{ color: stats.fraud > 3 ? "red" : "white" }}>
-                {stats.fraud}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      {/* 📍 Total Locations */}
+      {/* 📍 Location Lists */}
       <h3>📍 Total Locations</h3>
-      <ul>
-        {points.map((p) => (
-          <li key={p.id}>{p.name}</li>
-        ))}
-      </ul>
+      <ul>{points.map((p) => <li key={p.id}>{p.name}</li>)}</ul>
 
-      {/* 🟢 Visited */}
       <h3>🟢 Visited Locations</h3>
-      <ul>
-        {visitedLocations.map((p) => (
-          <li key={p.id}>{p.name}</li>
-        ))}
-      </ul>
+      <ul>{visitedLocations.map((p) => <li key={p.id}>{p.name}</li>)}</ul>
 
-      {/* 🔴 Missed */}
       <h3>🔴 Missed Locations</h3>
-      <ul>
-        {missedLocations.map((p) => (
-          <li key={p.id}>{p.name}</li>
-        ))}
-      </ul>
+      <ul>{missedLocations.map((p) => <li key={p.id}>{p.name}</li>)}</ul>
 
+      {/* ➕ ADD DRIVER */}
+      <h3>➕ Add Driver</h3>
+      <input placeholder="Name" value={driverName} onChange={(e) => setDriverName(e.target.value)} />
+      <input placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
+      <input placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} />
+      <button onClick={addDriver}>Create Driver</button>
+
+      {/* 📍 QR */}
+      <h3>📍 Add / Get QR</h3>
+      <input
+        placeholder="Enter Location Name"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+      />
+
+      <input
+        placeholder="Enter Latitude (e.g. 28.6139)"
+        value={lat}
+        onChange={(e) => setLat(e.target.value)}
+      />
+
+      <input
+        placeholder="Enter Longitude (e.g. 77.2090)"
+        value={lng}
+        onChange={(e) => setLng(e.target.value)}
+      />
+
+      <button onClick={addPoint}>Add + QR</button>
+      <button onClick={findQR}>Get QR</button>
+
+      {selectedPoint && (
+        <div>
+          <QRCodeCard point={selectedPoint} />
+          <button onClick={() => downloadQR(selectedPoint.id)}>Download</button>
+          <button onClick={() => printQR(selectedPoint.id)}>Print</button>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,0 +1,29 @@
+import { QRCodeCanvas } from "qrcode.react";
+
+export default function QRCodeCard({ point }) {
+  return (
+    <div
+      id={`qr-${point.id}`}
+      style={{
+        padding: "20px",
+        background: "white",
+        width: "260px",
+        textAlign: "center",
+        border: "1px solid #ccc",
+        borderRadius: "12px",
+      }}
+    >
+      <QRCodeCanvas
+        value={point.id.toString()}
+        size={180}
+      />
+
+      <h3>{point.name}</h3>
+      <p>ID: {point.id}</p>
+
+      <p style={{ fontSize: "12px", marginTop: "10px" }}>
+        Scan to mark garbage pickup
+      </p>
+    </div>
+  );
+}
