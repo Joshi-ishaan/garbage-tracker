@@ -70,6 +70,57 @@
   }
 }
 
+
+.filterButtons {
+  /* display: flex; */
+  gap: 16px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 10px;
+}
+
+.filterBtn {
+  padding: 10px 16px;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  border: none;
+  background-color: #2563eb;
+  color: white;
+  cursor: pointer;
+  font-weight: 500;
+  transition: 0.2s ease;
+}
+
+.filterBtn:hover {
+  background-color: #1d4ed8;
+  transform: translateY(-1px);
+}
+
+.activeFilter {
+  background-color: #16a34a !important;
+}
+
+.statsBox {
+  background: #1e293b; /* dark card */
+  border: 1px solid #1e293b;
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-top: 20px;
+  width: fit-content;
+  min-width: 250px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+.statsBox h3 {
+  margin-bottom: 12px;
+  color: white;
+}
+
+.statItem {
+  margin: 6px;
+  
+  font-size: 14px;
+}
+
 #next-steps {
   display: flex;
   border-top: 1px solid var(--border);

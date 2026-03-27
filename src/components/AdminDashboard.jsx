@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import QRCodeCard from "./QRCodeCard";
 import html2canvas from "html2canvas";
+import "../App.css";
 
 export default function AdminDashboard() {
   const [logs, setLogs] = useState([]);
@@ -120,36 +121,43 @@ export default function AdminDashboard() {
 
   // ✅ QR DOWNLOAD
   const downloadQR = async (id) => {
-    const element = document.getElementById(`qr-${id}`);
-    if (!element) return;
+  const element = document.getElementById(`qr-${id}`);
 
-    const canvas = await html2canvas(element);
-    const dataURL = canvas.toDataURL("image/png");
+  if (!element) {
+    alert("QR not found");
+    return;
+  }
 
-    const link = document.createElement("a");
-    link.href = dataURL;
-    link.download = `pickup-point-${id}.png`;
-    link.click();
-  };
+  const canvas = await html2canvas(element);
+
+  const link = document.createElement("a");
+  link.download = `qr-${id}.png`;
+  link.href = canvas.toDataURL();
+  link.click();
+};
 
   // ✅ QR PRINT
   const printQR = (id) => {
-    const element = document.getElementById(`qr-${id}`);
-    if (!element) return;
+  const element = document.getElementById(`qr-${id}`);
 
-    const win = window.open("", "", "width=400,height=600");
+  if (!element) {
+    alert("QR not found");
+    return;
+  }
 
-    win.document.write(`
-      <html>
-        <body style="display:flex;justify-content:center;align-items:center;height:100vh;">
-          ${element.outerHTML}
-        </body>
-      </html>
-    `);
+  const win = window.open("", "", "width=400,height=600");
 
-    win.document.close();
-    win.print();
-  };
+  win.document.write(`
+    <html>
+      <body style="display:flex;justify-content:center;align-items:center;height:100vh;">
+        ${element.outerHTML}
+      </body>
+    </html>
+  `);
+
+  win.document.close();
+  win.print();
+};
 
   // ✅ ADD DRIVER (FIXED)
   async function addDriver() {
@@ -227,6 +235,7 @@ export default function AdminDashboard() {
       <h2>📊 Admin Dashboard</h2>
 
       {/* 📅 Date Filter */}
+      <h3>Filter by Date</h3>
       <input
         type="date"
         value={selectedDate}
@@ -234,14 +243,26 @@ export default function AdminDashboard() {
       />
 
       {/* 🔘 Filters */}
-      <div>
-        <button onClick={() => setFilter("all")}>All</button>
-        <button onClick={() => setFilter("valid")}>Valid</button>
-        <button onClick={() => setFilter("fraud")}>Fraud</button>
-      </div>
+      <div className="filterButtons">
+  <button className ={`filterBtn ${filter === "all" ? "activeFilter" : ""}`}
+  onClick={() => setFilter("all")}>
+    Display All
+  </button>
+
+  <button className ={`filterBtn ${filter === "valid" ? "activeFilter" : ""}`}
+  onClick={() => setFilter("valid")}>
+    Valid Scans
+  </button>
+
+  <button className ={`filterBtn ${filter === "fraud" ? "activeFilter" : ""}`}
+  onClick={() => setFilter("fraud")}>
+    Fraud Scans
+  </button>
+</div>
 
       {/* 📊 Stats */}
-      <div>
+      <div className = "statsBox">
+        <h3>Statistics:</h3>
         <div>Total Locations: {totalPoints}</div>
         <div>Visited: {visited}</div>
         <div>Missed: {missed}</div>

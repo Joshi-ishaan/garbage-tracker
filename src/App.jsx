@@ -74,8 +74,9 @@ function App() {
     const { data: point, error } = await supabase
       .from("pickup_points")
       .select("*")
-      .eq("id", qrValue)   // ✅ FIX: ID based match
+      .eq("id", qrValue.trim())   // ✅ FIX: ID based match
       .single();
+      console.log("Scanned QR:", qrValue, "Matched Point:", point, "Error:", error);
 
     if (error || !point) {
       setStatus("❌ Invalid QR");

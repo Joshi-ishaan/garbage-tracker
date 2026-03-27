@@ -18,12 +18,19 @@ export default function QRCodeCard({ point }) {
         size={180}
       />
 
-      <h3>{point.name}</h3>
-      <p>ID: {point.id}</p>
+      <h3 style={{ color: "black" }}>{point.name}</h3>
 
-      <p style={{ fontSize: "12px", marginTop: "10px" }}>
-        Scan to mark garbage pickup
-      </p>
+<p style={{fontSize:"15px", color:"black"}}>ID: {point.id}</p>
+
+<p style={{ fontSize: "12px", color:"black" }}>
+  Scan to mark garbage pickup
+</p>
+<br />
+
+<p style={{ fontSize: "11px", color: "slategray" }}>
+  Built by: Ishaan Joshi
+  linkedin.com/in/ishaan-joshi-121nazal/
+</p>
     </div>
   );
 }
