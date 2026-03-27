@@ -136,28 +136,7 @@ export default function AdminDashboard() {
   link.click();
 };
 
-  // ✅ QR PRINT
-  const printQR = (id) => {
-  const element = document.getElementById(`qr-${id}`);
-
-  if (!element) {
-    alert("QR not found");
-    return;
-  }
-
-  const win = window.open("", "", "width=400,height=600");
-
-  win.document.write(`
-    <html>
-      <body style="display:flex;justify-content:center;align-items:center;height:100vh;">
-        ${element.outerHTML}
-      </body>
-    </html>
-  `);
-
-  win.document.close();
-  win.print();
-};
+ 
 
   // ✅ ADD DRIVER (FIXED)
   async function addDriver() {
@@ -328,7 +307,7 @@ export default function AdminDashboard() {
         <div>
           <QRCodeCard point={selectedPoint} />
           <button onClick={() => downloadQR(selectedPoint.id)}>Download</button>
-          <button onClick={() => printQR(selectedPoint.id)}>Print</button>
+          {/* <button onClick={() => printQR(selectedPoint.id)}>Print</button> */}
         </div>
       )}
     </div>
