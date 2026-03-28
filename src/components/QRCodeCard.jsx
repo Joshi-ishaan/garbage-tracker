@@ -5,32 +5,35 @@ export default function QRCodeCard({ point }) {
     <div
       id={`qr-${point.id}`}
       style={{
+        background: "#ffffff",
         padding: "20px",
-        background: "white",
-        width: "260px",
-        textAlign: "center",
-        border: "1px solid #ccc",
         borderRadius: "12px",
+        textAlign: "center",
+        width: "260px",
       }}
     >
-      <QRCodeCanvas
-        value={point.id.toString()}
-        size={180}
-      />
+      <QRCodeCanvas value={point.id} size={180} />
 
       <h3 style={{ color: "black" }}>{point.name}</h3>
 
-<p style={{fontSize:"15px", color:"black"}}>ID: {point.id}</p>
+      <p style={{ fontSize: "12px", color: "black" }}>
+        ID: {point.id}
+      </p>
 
-<p style={{ fontSize: "12px", color:"black" }}>
-  Scan to mark garbage pickup
-</p>
-<br />
+      <p style={{ fontSize: "12px", color: "black" }}>
+        Scan to mark garbage pickup
+      </p>
 
-<p style={{ fontSize: "11px", color: "slategray" }}>
-  Built by: Ishaan Joshi
+      <p style={{ fontSize: "11px", color: "gray" }}>
+        Built by Ishaan Joshi
+      </p>
+
+      <p style={{ fontSize: "11px", color: "gray" }}>
+        Built by: Ishaan Joshi
   linkedin.com/in/ishaan-joshi-121nazal/
-</p>
+      </p>
     </div>
   );
 }
+
+ 

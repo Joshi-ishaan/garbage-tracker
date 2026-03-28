@@ -121,6 +121,15 @@
   font-size: 14px;
 }
 
+.tableContainer {
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  margin-top: 10px;
+  padding: 5px;
+}
+
 #next-steps {
   display: flex;
   border-top: 1px solid var(--border);

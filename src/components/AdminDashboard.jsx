@@ -7,16 +7,14 @@ import "../App.css";
 export default function AdminDashboard() {
   const [logs, setLogs] = useState([]);
   const [points, setPoints] = useState([]);
-  const [profiles, setProfiles] = useState({}); // ✅ name map
+  const [profiles, setProfiles] = useState({});
   const [filter, setFilter] = useState("all");
   const [selectedDate, setSelectedDate] = useState("");
 
-  // 🔹 driver form
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [driverName, setDriverName] = useState("");
 
-  // 🔹 location form
   const [name, setName] = useState("");
   const [lat, setLat] = useState("");
   const [lng, setLng] = useState("");
@@ -28,21 +26,15 @@ export default function AdminDashboard() {
   }, []);
 
   async function fetchData() {
-    // ✅ pickup points
     const { data: pointsData } = await supabase
       .from("pickup_points")
       .select("*");
 
-    // ✅ logs (UNCHANGED — safe)
     const { data: logsData } = await supabase
       .from("scan_logs")
-      .select(`
-        *,
-        pickup_points(name)
-      `)
+      .select(`*, pickup_points(name)`)
       .order("start_time", { ascending: false });
 
-    // ✅ profiles separately (SAFE)
     const { data: profileData } = await supabase
       .from("profiles")
       .select("id, name");
@@ -57,21 +49,20 @@ export default function AdminDashboard() {
     setLogs(logsData || []);
   }
 
-  // 🔍 Filter
+  // FILTER
   const filteredLogs = logs.filter((log) => {
     const logDate = new Date(log.start_time)
       .toISOString()
       .split("T")[0];
 
     if (selectedDate && logDate !== selectedDate) return false;
-
     if (filter === "valid") return log.reason === "valid";
     if (filter === "fraud") return log.reason !== "valid";
 
     return true;
   });
 
-  // 📊 Stats
+  // STATS
   const totalPoints = points.length;
 
   const visitedIds = new Set(
@@ -82,10 +73,8 @@ export default function AdminDashboard() {
 
   const visited = visitedIds.size;
   const missed = totalPoints - visited;
-
   const fraudCount = filteredLogs.filter((l) => l.reason !== "valid").length;
 
-  // 📍 Lists
   const visitedLocations = points.filter((p) =>
     visitedIds.has(p.id)
   );
@@ -94,51 +83,7 @@ export default function AdminDashboard() {
     !visitedIds.has(p.id)
   );
 
-  // 👷 Driver Analytics (SAFE)
-  const driverStats = {};
-
-  logs.forEach((log) => {
-    const driver = profiles[log.user_id] || log.user_id;
-
-    if (!driverStats[driver]) {
-      driverStats[driver] = {
-        total: 0,
-        valid: 0,
-        fraud: 0,
-      };
-    }
-
-    driverStats[driver].total++;
-
-    if (log.reason === "valid") {
-      driverStats[driver].valid++;
-    } else {
-      driverStats[driver].fraud++;
-    }
-  });
-
-  const driverList = Object.entries(driverStats);
-
-  // ✅ QR DOWNLOAD
-  const downloadQR = async (id) => {
-  const element = document.getElementById(`qr-${id}`);
-
-  if (!element) {
-    alert("QR not found");
-    return;
-  }
-
-  const canvas = await html2canvas(element);
-
-  const link = document.createElement("a");
-  link.download = `qr-${id}.png`;
-  link.href = canvas.toDataURL();
-  link.click();
-};
-
- 
-
-  // ✅ ADD DRIVER (FIXED)
+  // ADD DRIVER
   async function addDriver() {
     if (!email || !password || !driverName) {
       alert("Fill all fields");
@@ -169,7 +114,7 @@ export default function AdminDashboard() {
     setDriverName("");
   }
 
-  // ✅ ADD LOCATION
+  // ADD LOCATION
   async function addPoint() {
     if (!name || !lat || !lng) {
       alert("Fill all fields");
@@ -197,23 +142,37 @@ export default function AdminDashboard() {
     }
   }
 
-  // ✅ FIND QR
-  const findQR = () => {
-    const found = points.find(
-      (p) =>
-        Number(p.latitude) === Number(lat) &&
-        Number(p.longitude) === Number(lng)
+  // 🔥 NEW: GET QR BY NAME
+  const getQRByName = () => {
+    if (!name) {
+      alert("Enter location name");
+      return;
+    }
+
+    const found = points.find((p) =>
+      p.name.toLowerCase().includes(name.toLowerCase())
     );
 
     if (found) setSelectedPoint(found);
     else alert("Location not found");
   };
 
+  // DOWNLOAD
+  const downloadQR = async (id) => {
+    const element = document.getElementById(`qr-${id}`);
+    if (!element) return;
+
+    const canvas = await html2canvas(element);
+    const link = document.createElement("a");
+    link.download = `qr-${id}.png`;
+    link.href = canvas.toDataURL();
+    link.click();
+  };
+
   return (
     <div className="container">
       <h2>📊 Admin Dashboard</h2>
 
-      {/* 📅 Date Filter */}
       <h3>Filter by Date</h3>
       <input
         type="date"
@@ -221,26 +180,20 @@ export default function AdminDashboard() {
         onChange={(e) => setSelectedDate(e.target.value)}
       />
 
-      {/* 🔘 Filters */}
       <div className="filterButtons">
-  <button className ={`filterBtn ${filter === "all" ? "activeFilter" : ""}`}
-  onClick={() => setFilter("all")}>
-    Display All
-  </button>
+        <button className={`filterBtn ${filter === "all" ? "activeFilter" : ""}`} onClick={() => setFilter("all")}>
+          Display All
+        </button>
+        <button className={`filterBtn ${filter === "valid" ? "activeFilter" : ""}`} onClick={() => setFilter("valid")}>
+          Valid Scans
+        </button>
+        <button className={`filterBtn ${filter === "fraud" ? "activeFilter" : ""}`} onClick={() => setFilter("fraud")}>
+          Fraud Scans
+        </button>
+      </div>
 
-  <button className ={`filterBtn ${filter === "valid" ? "activeFilter" : ""}`}
-  onClick={() => setFilter("valid")}>
-    Valid Scans
-  </button>
-
-  <button className ={`filterBtn ${filter === "fraud" ? "activeFilter" : ""}`}
-  onClick={() => setFilter("fraud")}>
-    Fraud Scans
-  </button>
-</div>
-
-      {/* 📊 Stats */}
-      <div className = "statsBox">
+      {/* STATS */}
+      <div className="statsBox">
         <h3>Statistics:</h3>
         <div>Total Locations: {totalPoints}</div>
         <div>Visited: {visited}</div>
@@ -248,66 +201,59 @@ export default function AdminDashboard() {
         <div>Fraud: {fraudCount}</div>
       </div>
 
-      {/* 📋 Logs */}
+      {/* LOGS (SCROLLABLE) */}
       <h3>📋 Scan Logs</h3>
-      <table>
-        <tbody>
-          {filteredLogs.map((log) => (
-            <tr key={log.id}>
-              <td>{profiles[log.user_id] || log.user_id}</td>
-              <td>{log.pickup_points?.name}</td>
-              <td>{log.reason}</td>
-              <td>{new Date(log.start_time).toLocaleString()}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <div className="tableContainer">
+        <table>
+          <tbody>
+            {filteredLogs.map((log) => (
+              <tr key={log.id}>
+                <td>{profiles[log.user_id] || log.user_id}</td>
+                <td>{log.pickup_points?.name}</td>
+                <td>{log.reason}</td>
+                <td>{new Date(log.start_time).toLocaleString()}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
-      {/* 📍 Location Lists */}
+      {/* LOCATIONS (SCROLLABLE) */}
       <h3>📍 Total Locations</h3>
-      <ul>{points.map((p) => <li key={p.id}>{p.name}</li>)}</ul>
+      <div className="tableContainer">
+        <ul>{points.map((p) => <li key={p.id}>{p.name}</li>)}</ul>
+      </div>
 
       <h3>🟢 Visited Locations</h3>
-      <ul>{visitedLocations.map((p) => <li key={p.id}>{p.name}</li>)}</ul>
+      <div className="tableContainer">
+        <ul>{visitedLocations.map((p) => <li key={p.id}>{p.name}</li>)}</ul>
+      </div>
 
       <h3>🔴 Missed Locations</h3>
-      <ul>{missedLocations.map((p) => <li key={p.id}>{p.name}</li>)}</ul>
+      <div className="tableContainer">
+        <ul>{missedLocations.map((p) => <li key={p.id}>{p.name}</li>)}</ul>
+      </div>
 
-      {/* ➕ ADD DRIVER */}
+      {/* ADD DRIVER */}
       <h3>➕ Add Driver</h3>
       <input placeholder="Name" value={driverName} onChange={(e) => setDriverName(e.target.value)} />
       <input placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
       <input placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} />
       <button onClick={addDriver}>Create Driver</button>
 
-      {/* 📍 QR */}
+      {/* QR */}
       <h3>📍 Add / Get QR</h3>
-      <input
-        placeholder="Enter Location Name"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-      />
-
-      <input
-        placeholder="Enter Latitude (e.g. 28.6139)"
-        value={lat}
-        onChange={(e) => setLat(e.target.value)}
-      />
-
-      <input
-        placeholder="Enter Longitude (e.g. 77.2090)"
-        value={lng}
-        onChange={(e) => setLng(e.target.value)}
-      />
+      <input placeholder="Enter Location Name" value={name} onChange={(e) => setName(e.target.value)} />
+      <input placeholder="Enter Latitude" value={lat} onChange={(e) => setLat(e.target.value)} />
+      <input placeholder="Enter Longitude" value={lng} onChange={(e) => setLng(e.target.value)} />
 
       <button onClick={addPoint}>Add + QR</button>
-      <button onClick={findQR}>Get QR</button>
+      <button onClick={getQRByName}>Get QR (Name)</button>
 
       {selectedPoint && (
         <div>
           <QRCodeCard point={selectedPoint} />
           <button onClick={() => downloadQR(selectedPoint.id)}>Download</button>
-          {/* <button onClick={() => printQR(selectedPoint.id)}>Print</button> */}
         </div>
       )}
     </div>
