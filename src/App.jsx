@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import QRScanner from "./components/QRScanner";
 import AdminDashboard from "./components/AdminDashboard";
 import Login from "./components/Login";
+import VehicleNumberEntry from "./components/VehicleNumberEntry";
 import { supabase } from "./lib/supabase";
 
 function App() {
@@ -10,6 +11,11 @@ function App() {
   // 🔐 Auth
   const [user, setUser] = useState(null);
   const [role, setRole] = useState(null);
+
+  // 🚛 Vehicle tracking states
+  const [needsVehicleEntry, setNeedsVehicleEntry] = useState(false);
+  const [vehicleNumber, setVehicleNumber] = useState(null);
+  const [assignedSpots, setAssignedSpots] = useState([]);
 
   // 📊 Scanner states
   const [status, setStatus] = useState("");
@@ -30,23 +36,66 @@ function App() {
 
     if (data?.user) {
       setUser(data.user);
-      fetchRole(data.user.id);
+      await fetchRoleAndVehicle(data.user.id);
     }
   }
 
-  async function fetchRole(userId) {
+  async function fetchRoleAndVehicle(userId) {
     const { data } = await supabase
       .from("profiles")
-      .select("role")
+      .select("role, vehicle_number")
       .eq("id", userId)
       .single();
 
     setRole(data?.role);
+
+    // If driver and no vehicle number, show vehicle entry
+    if (data?.role === "driver" && !data?.vehicle_number) {
+      setNeedsVehicleEntry(true);
+      setView("vehicleEntry");
+    } 
+    // If driver has vehicle number, load assigned spots
+    else if (data?.role === "driver" && data?.vehicle_number) {
+      setVehicleNumber(data.vehicle_number);
+      await loadAssignedSpots(data.vehicle_number);
+      setNeedsVehicleEntry(false);
+    }
   }
+
+  async function loadAssignedSpots(vehicleNum) {
+    const { data } = await supabase
+      .from("vehicle_routes")
+      .select(`
+        pickup_points (
+          id, 
+          name, 
+          latitude, 
+          longitude
+        )
+      `)
+      .eq("vehicle_number", vehicleNum)
+      .order("stop_order", { ascending: true });
+    
+    const spots = data?.map(item => item.pickup_points) || [];
+    setAssignedSpots(spots);
+    
+    // Optional: Show assigned spots count in console
+    console.log(`✅ Loaded ${spots.length} assigned spots for vehicle ${vehicleNum}`);
+  }
+
+  const handleVehicleVerified = async (info) => {
+    setVehicleNumber(info.vehicleNumber);
+    setAssignedSpots(info.assignedSpots);
+    setNeedsVehicleEntry(false);
+    setView("scanner");
+    
+    // Refresh the page state
+    alert(`✅ Vehicle ${info.vehicleNumber} verified! You can now scan assigned pickup points.`);
+  };
 
   const handleLogin = (loggedUser) => {
     setUser(loggedUser);
-    fetchRole(loggedUser.id);
+    fetchRoleAndVehicle(loggedUser.id);
   };
 
   // 📏 Distance function
@@ -67,16 +116,26 @@ function App() {
     return R * c;
   }
 
-  // 📸 Handle QR scan (🔥 FIXED HERE)
+  // 📸 Handle QR scan (MODIFIED to check assigned spots)
   const handleScan = async (qrValue) => {
     setStatus("Processing...");
+
+    // 🔥 NEW: Check if scanned point is assigned to this vehicle
+    const isAssigned = assignedSpots.some(spot => spot.id === qrValue.trim());
+    
+    if (!isAssigned && assignedSpots.length > 0) {
+      setStatus(`❌ This pickup point is not assigned to vehicle ${vehicleNumber}`);
+      setTimeout(() => setStatus(""), 3000);
+      return;
+    }
 
     const { data: point, error } = await supabase
       .from("pickup_points")
       .select("*")
-      .eq("id", qrValue.trim())   // ✅ FIX: ID based match
+      .eq("id", qrValue.trim())
       .single();
-      console.log("Scanned QR:", qrValue, "Matched Point:", point, "Error:", error);
+      
+    console.log("Scanned QR:", qrValue, "Matched Point:", point, "Error:", error);
 
     if (error || !point) {
       setStatus("❌ Invalid QR");
@@ -99,7 +158,7 @@ function App() {
           Number(point.longitude)
         );
 
-        // 🚨 Too far → fraud
+        // 🚨 Too far → fraud (with vehicle number)
         if (distance > 30) {
           setStatus("❌ Too far from location");
 
@@ -113,6 +172,7 @@ function App() {
               end_time: new Date().toISOString(),
               is_valid: false,
               reason: "too_far",
+              vehicle_number: vehicleNumber, // NEW: Store vehicle number
             },
           ]);
 
@@ -186,7 +246,7 @@ function App() {
     }
   }, [timer]);
 
-  // 💾 Save log
+  // 💾 Save log (MODIFIED to include vehicle_number)
   const saveLog = async (endTime) => {
     if (!currentPoint || !coords) return;
 
@@ -200,6 +260,7 @@ function App() {
         end_time: endTime.toISOString(),
         is_valid: isInside,
         reason: isInside ? "valid" : "left_early",
+        vehicle_number: vehicleNumber, // NEW: Store vehicle number
       },
     ]);
   };
@@ -207,6 +268,11 @@ function App() {
   // 🔐 Login screen
   if (!user) {
     return <Login onLogin={handleLogin} />;
+  }
+
+  // 🚛 Vehicle Entry Screen (NEW)
+  if (needsVehicleEntry && role === "driver") {
+    return <VehicleNumberEntry user={user} onVehicleVerified={handleVehicleVerified} />;
   }
 
   return (
@@ -228,6 +294,8 @@ function App() {
             await supabase.auth.signOut();
             setUser(null);
             setRole(null);
+            setVehicleNumber(null);
+            setNeedsVehicleEntry(false);
           }}
         >
           Logout
@@ -237,6 +305,29 @@ function App() {
       {/* 👷 Driver */}
       {view === "scanner" && role === "driver" && (
         <>
+          {/* Show assigned spots info */}
+          {assignedSpots.length > 0 && (
+            <div style={{ 
+              backgroundColor: "#1e293b", 
+              padding: "10px", 
+              borderRadius: "8px",
+              marginBottom: "10px"
+            }}>
+              <strong>🚛 Vehicle: {vehicleNumber}</strong>
+              <div style={{ fontSize: "14px", marginTop: "5px" }}>
+                📍 Assigned Pickup Points: {assignedSpots.length}
+                <details>
+                  <summary style={{fontSize:'18px', marginTop:'15px'}}>View list</summary>
+                  <ul style={{ marginTop: "5px", paddingLeft: "20px" }}>
+                    {assignedSpots.map((spot, idx) => (
+                      <li key={spot.id}>{idx + 1}. {spot.name}</li>
+                    ))}
+                  </ul>
+                </details>
+              </div>
+            </div>
+          )}
+          
           {!status && <QRScanner onScanSuccess={handleScan} />}
 
           {status && (
