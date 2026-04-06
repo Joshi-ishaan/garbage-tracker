@@ -41,7 +41,7 @@ function App() {
   }
 
   async function fetchRoleAndVehicle(userId) {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("profiles")
       .select("role, vehicle_number")
       .eq("id", userId)

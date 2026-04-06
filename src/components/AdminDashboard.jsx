@@ -323,13 +323,29 @@ export default function AdminDashboard() {
       return;
     }
 
+    // Check if email already exists in profiles
+    const { data: existingProfile } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("email", email)
+      .single();
+
+    if (existingProfile) {
+      alert("Driver with this email already exists.");
+      return;
+    }
+
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
     });
 
     if (error) {
-      alert(error.message);
+      if (error.status === 422) {
+        alert("This email already exists in the auth system but has no profile.\nPlease go to Supabase Dashboard → Authentication → Users → delete this user manually, then try again.");
+      } else {
+        alert(error.message);
+      }
       return;
     }
 
@@ -338,6 +354,7 @@ export default function AdminDashboard() {
         id: data.user.id,
         role: "driver",
         name: driverName,
+        email: email,
       },
     ]);
 

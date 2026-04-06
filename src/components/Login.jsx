@@ -13,9 +13,29 @@ export default function Login({ onLogin }) {
 
     if (error) {
       alert(error.message);
-    } else {
-      onLogin(data.user);
+      return;
     }
+
+    // Check if profile exists with a valid role
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", data.user.id)
+      .single();
+
+    if (!profile || !profile.role) {
+      await supabase.auth.signOut();
+      alert("Access denied. Your account is not registered in the system. Contact admin.");
+      return;
+    }
+
+    // Save email to profiles table so it's visible in the database
+    await supabase
+      .from("profiles")
+      .update({ email: data.user.email })
+      .eq("id", data.user.id);
+
+    onLogin(data.user);
   }
 
   return (
